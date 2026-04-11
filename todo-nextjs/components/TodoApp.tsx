@@ -242,6 +242,48 @@ export default function TodoApp() {
             onChange={e => setTagInput(e.target.value)}
           />
         </div>
+
+        {tagInput.trim() && (
+          <div className="tag-preview-row">
+            <span className="tag-preview-label">색상 지정</span>
+            {tagInput.split(',').map(t => t.trim()).filter(Boolean).map(tag => {
+              const pickerKey = `input-${tag}`;
+              const isOpen = colorPickerKey === pickerKey;
+              const color = tagColors[tag];
+              return (
+                <span key={tag} className="tag-color-wrapper">
+                  <span
+                    className="tag"
+                    style={color ? { backgroundColor: color + '26', color } : undefined}
+                    onClick={() => setColorPickerKey(isOpen ? null : pickerKey)}
+                    title="클릭하여 색상 지정"
+                  >
+                    #{tag}
+                  </span>
+                  {isOpen && (
+                    <div className="color-picker-popup" ref={colorPickerRef}>
+                      {TAG_PRESET_COLORS.map(c => (
+                        <button
+                          key={c}
+                          className={`color-swatch${color === c ? ' selected' : ''}`}
+                          style={{ background: c }}
+                          onClick={() => { updateTagColor(tag, c); setColorPickerKey(null); }}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        className="color-custom-input"
+                        value={color || '#6c63ff'}
+                        onChange={e => updateTagColor(tag, e.target.value)}
+                        title="직접 색상 선택"
+                      />
+                    </div>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="filters">
