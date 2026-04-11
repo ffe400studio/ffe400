@@ -91,11 +91,11 @@ export default function TodoApp() {
     const text = input.trim();
     if (!text) return;
     const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
-    const position = todos.length;
+    const position = todos.length > 0 ? Math.max(...todos.map(t => t.position)) + 1 : 0;
 
     const { error } = await supabase
       .from('todos')
-      .insert({ text, completed: false, priority, due_date: dueDate, tags, position });
+      .insert({ text, completed: false, priority, due_date: dueDate || null, tags, position });
 
     if (error) { console.error('Supabase 에러:', error); return; }
     await fetchTodos();
@@ -120,6 +120,7 @@ export default function TodoApp() {
 
   async function clearCompleted() {
     const completedIds = todos.filter(t => t.completed).map(t => t.id);
+    if (completedIds.length === 0) return;
     await supabase.from('todos').delete().in('id', completedIds);
     setTodos(prev => prev.filter(t => !t.completed));
   }
