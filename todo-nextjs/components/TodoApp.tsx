@@ -14,6 +14,7 @@ interface Todo {
   due_date: string;
   tags: string[];
   position: number;
+  image_url?: string | null;
 }
 
 const PRIORITY_LABEL: Record<Priority, string> = { high: '높음', medium: '보통', low: '낮음' };
@@ -22,6 +23,9 @@ const TAG_PRESET_COLORS = [
   '#6c63ff', '#2196f3', '#4caf50', '#ff9800',
   '#f44336', '#e91e63', '#009688', '#795548',
 ];
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export default function TodoApp() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -39,6 +43,14 @@ export default function TodoApp() {
   const [tagColors, setTagColors] = useState<Record<string, string>>({});
   const [colorPickerKey, setColorPickerKey] = useState<string | null>(null);
   const colorPickerRef = useRef<HTMLDivElement | null>(null);
+
+  // Image states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('darkMode');
@@ -62,6 +74,16 @@ export default function TodoApp() {
   useEffect(() => {
     document.body.style.background = darkMode ? '#121212' : '#f0f2f5';
   }, [darkMode]);
+
+  // Close lightbox on Escape key
+  useEffect(() => {
+    if (!lightboxUrl) return;
+    function handleKeyUp(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') setLightboxUrl(null);
+    }
+    document.addEventListener('keyup', handleKeyUp);
+    return () => document.removeEventListener('keyup', handleKeyUp);
+  }, [lightboxUrl]);
 
   function updateTagColor(tag: string, color: string) {
     setTagColors(prev => {
@@ -87,15 +109,108 @@ export default function TodoApp() {
     setLoading(false);
   }
 
+  // ── Image helpers ──────────────────────────────────
+
+  function processImageFile(file: File) {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      alert('JPG, PNG, GIF, WebP 형식만 지원합니다.');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      alert('파일 크기는 최대 5MB까지 가능합니다.');
+      return;
+    }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function clearImageSelection() {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  async function uploadImage(file: File): Promise<string | null> {
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
+
+    const { data, error } = await supabase.storage
+      .from('todo-images')
+      .upload(fileName, file, { contentType: file.type });
+
+    if (error) {
+      console.error('이미지 업로드 에러:', error);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('todo-images')
+      .getPublicUrl(data.path);
+
+    return publicUrl;
+  }
+
+  async function deleteImageFromStorage(imageUrl: string) {
+    try {
+      const parts = imageUrl.split('/todo-images/');
+      if (parts.length < 2) return;
+      await supabase.storage.from('todo-images').remove([parts[1]]);
+    } catch (e) {
+      console.error('이미지 삭제 에러:', e);
+    }
+  }
+
+  // ── Image drag-and-drop (input section) ────────────
+
+  function handleImageDragEnter(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      setIsDraggingImage(true);
+    }
+  }
+
+  function handleImageDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }
+
+  function handleImageDragLeave(e: React.DragEvent) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDraggingImage(false);
+    }
+  }
+
+  function handleImageDrop(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      setIsDraggingImage(false);
+      const file = e.dataTransfer.files[0];
+      if (file) processImageFile(file);
+    }
+  }
+
+  // ── CRUD ───────────────────────────────────────────
+
   async function addTodo() {
     const text = input.trim();
     if (!text) return;
     const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
     const position = todos.length > 0 ? Math.max(...todos.map(t => t.position)) + 1 : 0;
 
+    setUploading(true);
+    let image_url: string | null = null;
+    if (imageFile) {
+      image_url = await uploadImage(imageFile);
+    }
+    setUploading(false);
+
     const { error } = await supabase
       .from('todos')
-      .insert({ text, completed: false, priority, due_date: dueDate || null, tags, position });
+      .insert({ text, completed: false, priority, due_date: dueDate || null, tags, position, image_url });
 
     if (error) { console.error('Supabase 에러:', error); return; }
     await fetchTodos();
@@ -103,6 +218,7 @@ export default function TodoApp() {
     setTagInput('');
     setDueDate('');
     setPriority('medium');
+    clearImageSelection();
   }
 
   async function toggleTodo(id: number) {
@@ -114,13 +230,26 @@ export default function TodoApp() {
   }
 
   async function deleteTodo(id: number) {
+    const todo = todos.find(t => t.id === id);
+    if (todo?.image_url) {
+      await deleteImageFromStorage(todo.image_url);
+    }
     await supabase.from('todos').delete().eq('id', id);
     setTodos(prev => prev.filter(t => t.id !== id));
   }
 
   async function clearCompleted() {
-    const completedIds = todos.filter(t => t.completed).map(t => t.id);
-    if (completedIds.length === 0) return;
+    const completedTodos = todos.filter(t => t.completed);
+    if (completedTodos.length === 0) return;
+
+    // Delete images from storage
+    await Promise.all(
+      completedTodos
+        .filter(t => t.image_url)
+        .map(t => deleteImageFromStorage(t.image_url!))
+    );
+
+    const completedIds = completedTodos.map(t => t.id);
     await supabase.from('todos').delete().in('id', completedIds);
     setTodos(prev => prev.filter(t => !t.completed));
   }
@@ -203,7 +332,13 @@ export default function TodoApp() {
         </button>
       </div>
 
-      <div className="input-section">
+      <div
+        className={`input-section${isDraggingImage ? ' image-dropzone-active' : ''}`}
+        onDragEnter={handleImageDragEnter}
+        onDragOver={handleImageDragOver}
+        onDragLeave={handleImageDragLeave}
+        onDrop={handleImageDrop}
+      >
         <div className="input-row">
           <input
             type="text"
@@ -214,7 +349,9 @@ export default function TodoApp() {
             onKeyDown={handleKeyDown}
             autoComplete="off"
           />
-          <button className="add-btn" onClick={addTodo}>추가</button>
+          <button className="add-btn" onClick={addTodo} disabled={uploading}>
+            {uploading ? '...' : '추가'}
+          </button>
         </div>
 
         <div className="extra-inputs">
@@ -242,7 +379,50 @@ export default function TodoApp() {
             value={tagInput}
             onChange={e => setTagInput(e.target.value)}
           />
+
+          <button
+            className="image-attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            title="이미지 첨부 (JPG·PNG·GIF·WebP, 최대 5MB)"
+            type="button"
+          >
+            📎
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            className="hidden-file-input"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) processImageFile(file);
+            }}
+          />
         </div>
+
+        {/* 이미지 미리보기 */}
+        {imagePreview && (
+          <div className="image-preview-container" data-testid="image-preview">
+            <img src={imagePreview} alt="첨부 이미지 미리보기" className="image-preview-thumb" />
+            <span className="image-preview-name">{imageFile?.name}</span>
+            <button
+              className="image-preview-remove"
+              onClick={clearImageSelection}
+              title="이미지 제거"
+              type="button"
+              aria-label="이미지 제거"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* 드래그 안내 */}
+        {isDraggingImage && (
+          <div className="image-drop-indicator" data-testid="drop-indicator">
+            이미지를 여기에 놓으세요
+          </div>
+        )}
 
         {tagInput.trim() && (
           <div className="tag-preview-row">
@@ -392,6 +572,18 @@ export default function TodoApp() {
                     })}
                   </div>
                 )}
+                {/* 첨부 이미지 썸네일 */}
+                {todo.image_url && (
+                  <div className="todo-image-wrap">
+                    <img
+                      src={todo.image_url}
+                      alt="첨부 이미지"
+                      className="todo-image"
+                      onClick={() => setLightboxUrl(todo.image_url!)}
+                      title="클릭하여 확대"
+                    />
+                  </div>
+                )}
               </div>
               <button className="delete-btn" onClick={() => deleteTodo(todo.id)}>×</button>
             </li>
@@ -403,6 +595,29 @@ export default function TodoApp() {
         <span className="remain-count">{remainCount}개 남음</span>
         <button className="clear-btn" onClick={clearCompleted}>완료 항목 삭제</button>
       </div>
+
+      {/* 이미지 라이트박스 */}
+      {lightboxUrl && (
+        <div
+          className="lightbox-overlay"
+          onClick={() => setLightboxUrl(null)}
+          data-testid="lightbox"
+        >
+          <button
+            className="lightbox-close"
+            onClick={() => setLightboxUrl(null)}
+            aria-label="닫기"
+          >
+            ×
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="첨부 이미지 확대"
+            className="lightbox-img"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
