@@ -111,7 +111,7 @@ export default function InputArea({
   }
 
   return (
-    <div className="shrink-0 bg-input-bg px-4 pt-3 pb-3">
+    <div className="shrink-0 bg-input-bg px-4 pt-3 pb-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
 
       {showKeyInput && (
         <div className="mb-2 flex items-center gap-2">
