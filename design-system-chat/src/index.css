@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: #fafaf9;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* iOS 자동 확대 방지 */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e0e0dc;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c8c8c4;
+}
