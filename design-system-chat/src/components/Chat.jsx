@@ -13,44 +13,17 @@ export default function Chat({ session }) {
   const [tab, setTab] = useState('chat')
   const [messages, setMessages] = useState([])
   const [latestNotice, setLatestNotice] = useState(null)
-  const [showNoticeBoard, setShowNoticeBoard] = useState(false)
   const [todayEvents, setTodayEvents] = useState([])
   const [eventBannerDismissed, setEventBannerDismissed] = useState(false)
-  const [splitPct, setSplitPct] = useState(58)
   const [showTime, setShowTime] = useState(true)
   const [lightboxUrl, setLightboxUrl] = useState(null)
   const [userSettings, setUserSettings] = useState({})
   const bottomRef = useRef(null)
   const messagesRef = useRef([])
-  const isDragging = useRef(false)
-  const containerRef = useRef(null)
 
   const user = session.user
   const isAdmin = user.user_metadata?.role === 'admin'
   const userInitial = isAdmin ? 'A' : 'B'
-
-  // 드래그로 분할 비율 조절
-  useEffect(() => {
-    const onMove = (e) => {
-      if (!isDragging.current || !containerRef.current) return
-      e.preventDefault()
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX
-      const rect = containerRef.current.getBoundingClientRect()
-      const pct = ((clientX - rect.left) / rect.width) * 100
-      setSplitPct(Math.max(25, Math.min(75, pct)))
-    }
-    const onUp = () => { isDragging.current = false }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-    document.addEventListener('touchmove', onMove, { passive: false })
-    document.addEventListener('touchend', onUp)
-    return () => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      document.removeEventListener('touchmove', onMove)
-      document.removeEventListener('touchend', onUp)
-    }
-  }, [])
 
   const fetchMessages = useCallback(async () => {
     const { data } = await supabase
@@ -98,15 +71,15 @@ export default function Chat({ session }) {
     return () => clearInterval(interval)
   }, [fetchMessages, fetchLatestNotice, fetchUserSettings])
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
   async function fetchTodayEvents() {
     const today = new Date().toISOString().slice(0, 10)
     const { data } = await supabase.from('calendar_events').select('*').eq('date', today).order('created_at')
     if (data) setTodayEvents(data)
   }
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
 
   async function saveUserColor(color) {
     setUserSettings(prev => ({ ...prev, [user.id]: { ...prev[user.id], text_color: color } }))
@@ -182,16 +155,10 @@ export default function Chat({ session }) {
 
   return (
     <div className="flex flex-col bg-bg overflow-hidden" style={{ height: '100dvh' }}>
-      <TopBar
-        tab={tab}
-        onTabChange={setTab}
-        showNoticeBoard={showNoticeBoard}
-        onToggleNotice={() => setShowNoticeBoard(v => !v)}
-        onExport={exportChat}
-      />
+      <TopBar tab={tab} onTabChange={setTab} onExport={exportChat} />
 
-      {tab === 'chat' && latestNotice && !showNoticeBoard && (
-        <NoticeBanner notice={latestNotice} onClick={() => setShowNoticeBoard(true)} />
+      {tab === 'chat' && latestNotice && (
+        <NoticeBanner notice={latestNotice} onClick={() => setTab('notice')} />
       )}
 
       {tab === 'chat' && todayEvents.length > 0 && !eventBannerDismissed && (
@@ -205,68 +172,50 @@ export default function Chat({ session }) {
           </div>
           <button
             onClick={() => setEventBannerDismissed(true)}
-            className="text-[12px] font-mono ml-3 shrink-0 hover:opacity-60 transition-opacity"
+            className="text-[13px] font-mono ml-3 shrink-0 hover:opacity-60 transition-opacity"
             style={{ color: '#7D91AA' }}
           >×</button>
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden" ref={containerRef}>
-        {tab === 'chat' ? (
-          <>
-            {/* 채팅 영역 */}
-            <div
-              className="flex flex-col overflow-hidden min-w-0"
-              style={{ width: showNoticeBoard ? `${splitPct}%` : '100%' }}
-            >
-              <MessageList
-                messages={messages}
-                currentUserId={user.id}
-                isAdmin={isAdmin}
-                showTime={showTime}
-                onDelete={deleteMessage}
-                onImageClick={setLightboxUrl}
-                bottomRef={bottomRef}
-                userSettings={userSettings}
-              />
-              <InputArea
-                onSend={sendMessage}
-                userInitial={userInitial}
-                isAdmin={isAdmin}
-                onExport={exportChat}
-                showTime={showTime}
-                onToggleTime={() => setShowTime(v => !v)}
-                onClearAll={clearAllMessages}
-                onAIResponse={handleAIResponse}
-                ownColor={ownColor}
-                onColorChange={saveUserColor}
-              />
-            </div>
-
-            {/* 드래그 구분선 */}
-            {showNoticeBoard && (
-              <div
-                className="w-[3px] shrink-0 bg-divider hover:bg-[#b0b0ac] transition-colors cursor-col-resize select-none"
-                onMouseDown={() => { isDragging.current = true }}
-                onTouchStart={() => { isDragging.current = true }}
-              />
-            )}
-
-            {/* 노티스 보드 영역 */}
-            {showNoticeBoard && (
-              <div
-                className="flex flex-col overflow-hidden min-w-0 border-l border-divider"
-                style={{ width: `${100 - splitPct}%` }}
-              >
-                <NoticeBoard userId={user.id} isAdmin={isAdmin} />
-              </div>
-            )}
-          </>
-        ) : tab === 'board' ? (
+      <div className="flex flex-1 overflow-hidden">
+        {tab === 'chat' && (
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <MessageList
+              messages={messages}
+              currentUserId={user.id}
+              isAdmin={isAdmin}
+              showTime={showTime}
+              onDelete={deleteMessage}
+              onImageClick={setLightboxUrl}
+              bottomRef={bottomRef}
+              userSettings={userSettings}
+            />
+            <InputArea
+              onSend={sendMessage}
+              userInitial={userInitial}
+              isAdmin={isAdmin}
+              onExport={exportChat}
+              showTime={showTime}
+              onToggleTime={() => setShowTime(v => !v)}
+              onClearAll={clearAllMessages}
+              onAIResponse={handleAIResponse}
+              ownColor={ownColor}
+              onColorChange={saveUserColor}
+            />
+          </div>
+        )}
+        {tab === 'notice' && (
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <NoticeBoard userId={user.id} isAdmin={isAdmin} />
+          </div>
+        )}
+        {tab === 'board' && (
           <div className="flex flex-col flex-1 overflow-hidden">
             <Board session={session} isAdmin={isAdmin} />
           </div>
-        ) : (
+        )}
+        {tab === 'calendar' && (
           <div className="flex flex-col flex-1 overflow-hidden">
             <CalendarTab session={session} isAdmin={isAdmin} />
           </div>
