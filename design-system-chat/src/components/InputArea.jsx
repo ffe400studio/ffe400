@@ -230,18 +230,18 @@ export default function InputArea({
 
       <div className="flex items-center justify-between mt-2">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-mono" style={{ color: '#7D91AA' }}>
-            {userInitial === 'A' ? 'user_a' : 'user_b'}
-          </span>
-
-          {/* 텍스트 컬러 선택 */}
+          {/* 이름 클릭 → 내 텍스트 색상 변경 */}
           <button
             type="button"
             onClick={() => colorRef.current?.click()}
-            className="w-3 h-3 rounded-full border border-white/40 transition-transform hover:scale-125"
-            style={{ backgroundColor: displayColor }}
-            title="내 텍스트 색상"
-          />
+            className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+            title="내 텍스트 색상 변경"
+          >
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: displayColor }} />
+            <span className="text-[10px] font-mono" style={{ color: displayColor }}>
+              {userInitial === 'A' ? 'user_a' : 'user_b'}
+            </span>
+          </button>
           <input
             type="color"
             ref={colorRef}
