@@ -8,9 +8,12 @@ import NoticeBoard from './NoticeBoard'
 import Lightbox from './Lightbox'
 import Board from './Board'
 import CalendarTab from './CalendarTab'
+import SettingsBar from './SettingsBar'
 
 export default function Chat({ session }) {
   const [tab, setTab] = useState('chat')
+  const [showSettings, setShowSettings] = useState(false)
+  const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('ds_theme') || 'cream')
   const [messages, setMessages] = useState([])
   const [latestNotice, setLatestNotice] = useState(null)
   const [todayEvents, setTodayEvents] = useState([])
@@ -155,7 +158,22 @@ export default function Chat({ session }) {
 
   return (
     <div className="flex flex-col bg-bg overflow-hidden" style={{ height: '100dvh' }}>
-      <TopBar tab={tab} onTabChange={setTab} onExport={exportChat} />
+      <TopBar
+        tab={tab}
+        onTabChange={setTab}
+        onExport={exportChat}
+        showSettings={showSettings}
+        onToggleSettings={() => setShowSettings(v => !v)}
+      />
+      {showSettings && (
+        <SettingsBar
+          currentTheme={currentTheme}
+          onThemeChange={setCurrentTheme}
+          ownColor={ownColor}
+          onColorChange={saveUserColor}
+          userInitial={userInitial}
+        />
+      )}
 
       {tab === 'chat' && latestNotice && (
         <NoticeBanner notice={latestNotice} onClick={() => setTab('notice')} />

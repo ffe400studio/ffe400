@@ -20,7 +20,6 @@ export default function InputArea({
   const [aiError, setAiError] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
   const fileRef = useRef(null)
-  const colorRef = useRef(null)
 
   const displayColor = ownColor || (userInitial === 'A' ? '#7DAAA0' : '#827DAA')
 
@@ -230,25 +229,12 @@ export default function InputArea({
 
       <div className="flex items-center justify-between mt-2">
         <div className="flex items-center gap-3">
-          {/* 이름 클릭 → 내 텍스트 색상 변경 */}
-          <button
-            type="button"
-            onClick={() => colorRef.current?.click()}
-            className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
-            title="내 텍스트 색상 변경"
-          >
+          <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: displayColor }} />
             <span className="text-[10px] font-mono" style={{ color: displayColor }}>
               {userInitial === 'A' ? 'user_a' : 'user_b'}
             </span>
-          </button>
-          <input
-            type="color"
-            ref={colorRef}
-            value={displayColor}
-            onChange={e => onColorChange(e.target.value)}
-            className="hidden"
-          />
+          </div>
 
           <button
             onClick={toggleAiMode}

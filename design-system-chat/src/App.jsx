@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import Login from './components/Login'
 import Chat from './components/Chat'
+import { applyTheme } from './lib/themes'
 
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    applyTheme(localStorage.getItem('ds_theme') || 'cream')
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
