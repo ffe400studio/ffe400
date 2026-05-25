@@ -19,6 +19,8 @@ export default {
         'input-bg': 'var(--color-input-bg)',
         'send-text': 'var(--color-send-text)',
         'input-placeholder': 'var(--color-input-placeholder)',
+        'surface': 'var(--color-surface)',
+        'surface-hover': 'var(--color-surface-hover)',
       },
     },
   },

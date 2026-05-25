@@ -12,6 +12,9 @@
   --color-btn: #b0b0ac;
   --color-send-text: #7D91AA;
   --color-input-placeholder: #c0d4e8;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f0f4f8;
+  --color-surface-input: #ffffff;
 }
 
 * {
@@ -29,6 +32,28 @@ body {
 
 input, textarea, select {
   font-size: 16px !important;
+}
+
+/* 다크 테마: bg-white → surface 색으로 */
+[data-theme="dark"] .bg-white {
+  background-color: var(--color-surface) !important;
+}
+[data-theme="dark"] .hover\:bg-\[#f0f4f8\]:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+[data-theme="dark"] .bg-\[#fafaf9\] {
+  background-color: var(--color-surface-input) !important;
+}
+[data-theme="dark"] .border-white\/20,
+[data-theme="dark"] .border-white\/30,
+[data-theme="dark"] .border-white\/40 {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+[data-theme="dark"] .text-\[\#111\] {
+  color: #e0e0dc !important;
+}
+[data-theme="dark"] .text-\[\#555\] {
+  color: #a0a09c !important;
 }
 
 ::-webkit-scrollbar {
