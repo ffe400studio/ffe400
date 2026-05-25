@@ -110,6 +110,21 @@ export default function Board({ session, isAdmin }) {
     setNewPostImagePreview(null)
   }
 
+  function handlePaste(e) {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (!file) continue
+        setNewPostImage(file)
+        if (newPostImagePreview) URL.revokeObjectURL(newPostImagePreview)
+        setNewPostImagePreview(URL.createObjectURL(file))
+        break
+      }
+    }
+  }
+
   function handleFileChange(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -177,7 +192,8 @@ export default function Board({ session, isAdmin }) {
               <textarea
                 value={newPostContent}
                 onChange={e => setNewPostContent(e.target.value)}
-                placeholder="내용 (선택)"
+                onPaste={handlePaste}
+                placeholder="내용 (선택) — 사진 붙여넣기 가능"
                 rows={2}
                 className="bg-white text-[13px] font-mono text-send-text placeholder-input-placeholder px-3 py-2 outline-none border border-white/20 resize-none"
                 style={{ borderRadius: 2 }}

@@ -27,6 +27,21 @@ export default function NoticeBoard({ userId, isAdmin }) {
     if (data) setNotices(data)
   }
 
+  function handlePaste(e) {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (!file) continue
+        if (imagePreview) URL.revokeObjectURL(imagePreview)
+        setImageFile(file)
+        setImagePreview(URL.createObjectURL(file))
+        break
+      }
+    }
+  }
+
   function handleFileChange(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -180,7 +195,8 @@ export default function NoticeBoard({ userId, isAdmin }) {
             <textarea
               value={content}
               onChange={e => setContent(e.target.value)}
-              placeholder="내용 (선택)"
+              onPaste={handlePaste}
+              placeholder="내용 (선택) — 사진 붙여넣기 가능"
               rows={3}
               className="bg-white border border-white/20 text-[12px] font-mono text-send-text placeholder-input-placeholder px-3 py-2 outline-none resize-none"
               style={{ borderRadius: 2 }}

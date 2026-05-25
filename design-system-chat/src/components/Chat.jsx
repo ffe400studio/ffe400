@@ -7,12 +7,15 @@ import InputArea from './InputArea'
 import NoticeBoard from './NoticeBoard'
 import Lightbox from './Lightbox'
 import Board from './Board'
+import CalendarTab from './CalendarTab'
 
 export default function Chat({ session }) {
   const [tab, setTab] = useState('chat')
   const [messages, setMessages] = useState([])
   const [latestNotice, setLatestNotice] = useState(null)
   const [showNoticeBoard, setShowNoticeBoard] = useState(false)
+  const [todayEvents, setTodayEvents] = useState([])
+  const [eventBannerDismissed, setEventBannerDismissed] = useState(false)
   const [splitPct, setSplitPct] = useState(58)
   const [showTime, setShowTime] = useState(true)
   const [lightboxUrl, setLightboxUrl] = useState(null)
@@ -87,12 +90,19 @@ export default function Chat({ session }) {
     fetchMessages()
     fetchLatestNotice()
     fetchUserSettings()
+    fetchTodayEvents()
     const interval = setInterval(() => {
       fetchMessages()
       fetchLatestNotice()
     }, 3000)
     return () => clearInterval(interval)
   }, [fetchMessages, fetchLatestNotice, fetchUserSettings])
+
+  async function fetchTodayEvents() {
+    const today = new Date().toISOString().slice(0, 10)
+    const { data } = await supabase.from('calendar_events').select('*').eq('date', today).order('created_at')
+    if (data) setTodayEvents(data)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -184,6 +194,23 @@ export default function Chat({ session }) {
         <NoticeBanner notice={latestNotice} onClick={() => setShowNoticeBoard(true)} />
       )}
 
+      {tab === 'chat' && todayEvents.length > 0 && !eventBannerDismissed && (
+        <div className="flex items-center justify-between px-5 py-2 border-b border-divider shrink-0"
+          style={{ backgroundColor: '#f0f4f8' }}>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] font-mono tracking-widest shrink-0" style={{ color: '#7D91AA' }}>TODAY</span>
+            <span className="text-[11px] font-mono truncate" style={{ color: '#7D91AA' }}>
+              {todayEvents.map(e => e.title).join(' · ')}
+            </span>
+          </div>
+          <button
+            onClick={() => setEventBannerDismissed(true)}
+            className="text-[12px] font-mono ml-3 shrink-0 hover:opacity-60 transition-opacity"
+            style={{ color: '#7D91AA' }}
+          >×</button>
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden" ref={containerRef}>
         {tab === 'chat' ? (
           <>
@@ -235,9 +262,13 @@ export default function Chat({ session }) {
               </div>
             )}
           </>
-        ) : (
+        ) : tab === 'board' ? (
           <div className="flex flex-col flex-1 overflow-hidden">
             <Board session={session} isAdmin={isAdmin} />
+          </div>
+        ) : (
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <CalendarTab session={session} isAdmin={isAdmin} />
           </div>
         )}
       </div>

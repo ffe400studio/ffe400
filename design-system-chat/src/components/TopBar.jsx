@@ -24,6 +24,16 @@ export default function TopBar({ tab, onTabChange, showNoticeBoard, onToggleNoti
           >
             board
           </button>
+          <button
+            onClick={() => onTabChange('calendar')}
+            className="text-[11px] font-mono px-2 py-0.5 transition-colors"
+            style={{
+              color: tab === 'calendar' ? '#888884' : '#c8c8c4',
+              borderBottom: tab === 'calendar' ? '1px solid #888884' : '1px solid transparent',
+            }}
+          >
+            cal
+          </button>
         </div>
       </div>
       <div className="flex items-center gap-4">
