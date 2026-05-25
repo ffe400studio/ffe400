@@ -18,6 +18,7 @@ export default function InputArea({
   const [keyInput, setKeyInput] = useState('')
   const [savedKey, setSavedKey] = useState(() => localStorage.getItem(GEMINI_KEY) || '')
   const [aiError, setAiError] = useState('')
+  const [isDragOver, setIsDragOver] = useState(false)
   const fileRef = useRef(null)
   const colorRef = useRef(null)
 
@@ -110,8 +111,33 @@ export default function InputArea({
     }
   }
 
+  function handleDrop(e) {
+    e.preventDefault()
+    setIsDragOver(false)
+    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'))
+    if (!file) return
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
   return (
-    <div className="shrink-0 bg-input-bg px-4 pt-3 pb-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+    <div
+      className="shrink-0 bg-input-bg px-4 pt-3 transition-colors"
+      style={{
+        paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+        backgroundColor: isDragOver ? '#a8c8f0' : '',
+      }}
+      onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={handleDrop}
+    >
+      {/* drag overlay hint */}
+      {isDragOver && (
+        <div className="text-center text-[11px] font-mono mb-2" style={{ color: '#7D91AA' }}>
+          사진을 놓아주세요
+        </div>
+      )}
 
       {showKeyInput && (
         <div className="mb-2 flex items-center gap-2">

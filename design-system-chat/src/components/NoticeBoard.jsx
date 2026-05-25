@@ -27,6 +27,15 @@ export default function NoticeBoard({ userId, isAdmin }) {
     if (data) setNotices(data)
   }
 
+  function handleDrop(e) {
+    e.preventDefault()
+    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'))
+    if (!file) return
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
   function handlePaste(e) {
     const items = e.clipboardData?.items
     if (!items) return
@@ -180,7 +189,11 @@ export default function NoticeBoard({ userId, isAdmin }) {
       </div>
 
       {/* 작성 영역 */}
-      <div className="shrink-0 bg-input-bg px-4 pt-3 pb-3">
+      <div
+        className="shrink-0 bg-input-bg px-4 pt-3 pb-3"
+        onDragOver={e => e.preventDefault()}
+        onDrop={handleDrop}
+      >
         {showForm ? (
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <input

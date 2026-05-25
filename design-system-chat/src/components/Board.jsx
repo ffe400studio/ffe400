@@ -110,6 +110,15 @@ export default function Board({ session, isAdmin }) {
     setNewPostImagePreview(null)
   }
 
+  function handleDrop(e) {
+    e.preventDefault()
+    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'))
+    if (!file) return
+    setNewPostImage(file)
+    if (newPostImagePreview) URL.revokeObjectURL(newPostImagePreview)
+    setNewPostImagePreview(URL.createObjectURL(file))
+  }
+
   function handlePaste(e) {
     const items = e.clipboardData?.items
     if (!items) return
@@ -179,7 +188,7 @@ export default function Board({ session, isAdmin }) {
           ))}
         </div>
 
-        <div className="shrink-0 bg-input-bg px-4 pt-3 pb-3">
+        <div className="shrink-0 bg-input-bg px-4 pt-3 pb-3" onDragOver={e => e.preventDefault()} onDrop={handleDrop}>
           {showNewPost ? (
             <div className="flex flex-col gap-2">
               {newPostImagePreview && (
