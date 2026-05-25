@@ -54,7 +54,7 @@ export default function InputArea({
   }
 
   function handleKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault()
       handleSend(e)
     }
@@ -167,17 +167,25 @@ export default function InputArea({
         )}
         <input type="file" ref={fileRef} onChange={handleFileChange} accept="image/*" className="hidden" />
 
-        <input
-          type="text"
+        <textarea
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           placeholder={aiMode ? 'ask ai...' : 'message'}
-          className={`flex-1 bg-white text-[13px] font-mono text-send-text placeholder-input-placeholder px-3 py-1.5 outline-none border h-8 transition-colors ${
-            aiMode ? 'border-[#d4d4a0]/80' : 'border-white/20'
-          }`}
-          style={{ borderRadius: 2 }}
+          rows={1}
+          className={`flex-1 bg-white text-[13px] font-mono text-send-text placeholder-input-placeholder px-3 py-1.5 outline-none border transition-colors resize-none`}
+          style={{
+            borderRadius: 2,
+            borderColor: aiMode ? 'rgba(212,212,160,0.8)' : 'rgba(255,255,255,0.2)',
+            minHeight: 32,
+            maxHeight: 96,
+            overflowY: 'auto',
+          }}
+          onInput={e => {
+            e.target.style.height = 'auto'
+            e.target.style.height = Math.min(e.target.scrollHeight, 96) + 'px'
+          }}
         />
 
         <button
